@@ -12,6 +12,10 @@
         "semi": "off",
         "arrow-parens": "off",
         "quote": "double",
-        "require-jsdoc":"off"
+        "require-jsdoc":"off",
+        "no-console": process.env.NODE_ENV === "production" ? "error" : "off",
+        "prettier/prettier": "on",
+        "No irregular whitespace": 0,
+        "no-debugger": process.env.NODE_ENV === "production" ? "warn" : "off"
     }
 }
