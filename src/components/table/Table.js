@@ -1,74 +1,87 @@
 import { ExcelComponent } from "../../core/ExcelComponent";
 import { createTable } from "./tableTemplate";
-// import { $ } from "../../core/dom";
 import { resizeHandler } from "./resizeHandler";
-import { shouldResize } from "./table.functions";
+import { isCell, isGroupCell, shouldResize } from "./table.functions";
+import { TableSelection } from "./TableSelection";
+import { $ } from "../../core/dom";
+import { matrix, nextSelector, range } from "../../core/utils";
 export class Table extends ExcelComponent {
-    static className = 'excel__table'
-    constructor($root) {
-        super($root, {
-            listeners: ['mousedown']
-        })
+  static className = "excel__table";
+  constructor($root, options) {
+    super($root, {
+      listeners: ["mousedown", "keydown", "input"],
+      ...options
+    });
+  
+  }
+
+  prepare() {
+    this.selection = new TableSelection();
+  }
+
+  toHTML() {
+    return createTable();
+  }
+
+  init() {
+    super.init();
+    const $cell = this.$root.find('[data-id="0:0"]');
+    this.selectCell($cell)
+
+    this.$on('formula:input', (text) => {
+      this.selection.current.text(text)
+    })
+
+    this.$on('formula:done', () => {
+      this.selection.current.focus()
+    })
+  }
+
+  selectCell($cell) {
+    this.selection.select($cell);
+    this.$emit('table:select', $cell)
+  }
+
+  onMousedown(event) {
+    if (shouldResize(event)) {
+      resizeHandler.call(this, event);
+    } else if (isCell(event)) {
+      const $target = $(event.target);
+
+      if (isGroupCell(event)) {
+        const $cells = matrix(this.selection.current, $target).map((id) =>
+          this.$root.find(`[data-id="${id}"]`)
+        );
+
+        this.selection.selectGroup($cells);
+      } else {
+        this.selection.select($target);
+      }
     }
-    
-    toHTML() {
-        return createTable()
+  }
+
+  onKeydown(event) {
+    const keys = [
+      "Enter",
+      "Tab",
+      "ArrowLeft",
+      "ArrowRight",
+      "ArrowDown",
+      "ArrowUp"
+    ]
+
+    const { key } = event
+    if(keys.includes(key) && !event.shiftKey) {
+      event.preventDefault();
+      const id = this.selection.current.id(true)    
+      const $next = this.$root.find(nextSelector(key, id))
+      this.selectCell($next)
     }
+  }
 
-    onMousedown(event) {
-        if(shouldResize(event)) {
-            resizeHandler.call(this, event)
-        }
-       
-        // if(event.target.dataset.resize) {
-        //     let value
-        //     const $resizer = $(event.target)
-        //     const $parent = $resizer.closest('[data-type="resizable"]')
-        //     const coords = $parent.getCoords()
-
-        //     const cells = this.$root.findAll(`[data-col="${$parent.data.col}"]`)
-        //     const type = $resizer.data.resize
-
-        //     $resizer.css({
-        //         opacity: 1
-        //     })
-
-        //     document.onmousemove = (e) => {
-        //         if(type === 'col') {
-        //             const delta = e.pageX - coords.right
-        //             $resizer.css({
-        //                 right: -delta + 'px',
-        //                 bottom: '-5000px'
-        //             })
-        //              value = coords.width + delta
-        //         } else {
-        //             const delta = e.pageY - coords.bottom
-        //             value = coords.height + delta
-        //             $resizer.css({
-        //                 bottom: -delta + 'px',
-        //                 right: '-5000px'
-        //             })
-        //         }
-                
-                  
-        //     }
-
-        //     document.onmouseup = (e) => {
-        //         document.onmousemove = null
-        //         document.onmouseup = null
-
-        //         if(type === 'col') {
-        //             $parent.css({ width: value + 'px' })
-        //             cells.forEach(el =>  el.style.width = value + 'px')
-        //         } else {
-        //             $parent.css({ height: value + 'px' })
-        //         }
-        //         $resizer.css({
-        //             opacity: 0,
-        //             bottom: 0,
-        //             right: 0
-        //         })
-        //     }
-        // }  
-    }
+  onInput(event) {
+    this.$emit('table:input', $(event.target))
+  }
 }
+
+
