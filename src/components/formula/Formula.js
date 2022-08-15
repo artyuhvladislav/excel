@@ -7,6 +7,7 @@ export class Formula extends ExcelComponent {
     constructor($root, options) {
         super($root, {
             name: 'Formula',
+            subscribe: ['currentText'],
             listeners: ['input', 'keydown'],
             ...options
         })
@@ -26,9 +27,10 @@ export class Formula extends ExcelComponent {
         this.$on('table:select', $cell => {
             this.$formula.text($cell.text())
         })
-        this.$on('table:input', $cell => {
-            this.$formula.text($cell.text())
-        })
+    }
+
+    storeChanged({ currentText }) {
+        this.$formula.text(currentText)
     }
 
     onInput(event) {
